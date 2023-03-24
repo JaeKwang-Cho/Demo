@@ -2,14 +2,27 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
+class DEMO_API AEnemyPanchi;
 
-/**
- * 
- */
-class DEMO_API BTVisitor
+#include <memory>
+
+class Visitor
 {
 public:
-	BTVisitor();
-	~BTVisitor();
+	virtual void Visit(AEnemyPanchi* Panchi){}
+	//Add Visit 
 };
+
+class DescVisitor : public Visitor
+{
+public:
+	virtual void Visit(AEnemyPanchi* Panchi) override;
+};
+
+class AttackVisitor : public Visitor
+{
+public:
+	virtual void Visit(AEnemyPanchi* Panchi) override;
+};
+
+using VisitorPtr = std::shared_ptr<Visitor>;

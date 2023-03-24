@@ -2,11 +2,15 @@
 
 
 #include "Character/Enemy/Cores/BTVisitor.h"
+#include "Character/Enemy/Monsters/EnemyPanchi.h"
 
-BTVisitor::BTVisitor()
+void DescVisitor::Visit(AEnemyPanchi* Panchi)
 {
+	UE_LOG(LogTemp,Log,TEXT("I am Panchi"));
 }
 
-BTVisitor::~BTVisitor()
+void AttackVisitor::Visit(AEnemyPanchi* Panchi)
 {
+	Panchi->DefaultAttack();
 }
+

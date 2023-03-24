@@ -13,5 +13,22 @@ UCLASS()
 class DEMO_API UEnemyAnimInstance : public UCharacterAnimInstanceBase
 {
 	GENERATED_BODY()
+public:
+	virtual void NativeInitializeAnimation() override;
 	
+	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
+
+private:
+
+	UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category= Movement, meta = (AllowPrivateAccess = "true"))
+	class AEnemyCharacter* Enemy;
+
+	UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category= Movement, meta = (AllowPrivateAccess = "true"))
+	float Speed;
+	
+	UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category= Movement, meta = (AllowPrivateAccess = "true"))
+	float Direction;
+
+	UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category= Movement, meta = (AllowPrivateAccess = "true"))
+	bool bIsInAir;
 };
