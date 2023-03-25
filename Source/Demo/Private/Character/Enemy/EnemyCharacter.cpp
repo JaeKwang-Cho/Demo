@@ -19,8 +19,8 @@ MonsterType(EMonsterType::EMT_Idle),
 MonsterAttackRange(EMonsterAttackRange::EMAR_DefaultAttackRange),
 MaxHp(100),
 HealthBarDisplayTime(5.f),
-DefaultAttackRange(300.f),
-DefulatAttackPlayRate(1.0f)
+DefaultAttackRange(200.f),
+DefaultAttackPlayRate(1.0f)
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -68,10 +68,12 @@ void AEnemyCharacter::BeginPlay()
 void AEnemyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	if(GetMonsterType()!=EMonsterType::EMT_Attacking)
+	/*
+	if(EMonsterType::EMT_Attack == MonsterType || EMonsterType::EMT_Move == MonsterType)
+	{
 		TickAttackRangeCalculate();
-
-	
+	}
+	*/
 }
 
 void AEnemyCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -128,11 +130,31 @@ void AEnemyCharacter::MoveToTarget(ADemoCharacterBase* _Target, float _Acceptanc
 		MoveRequest.SetAcceptanceRadius(_AcceptanceRadius);
 		FNavPathSharedPtr NavPath;
 
-		EnemyController->MoveToActor(_Target, _AcceptanceRadius,true, false);
-		//상태 스피드.. 등등..
-
-		
+		EnemyController->MoveToActor(_Target, _AcceptanceRadius,true, true);
+		//상태 스피드.. 등등..		
 	}
+}
+
+void AEnemyCharacter::MoveToCircleRange(ADemoCharacterBase* _Target)
+{
+	if(EnemyController)
+	{
+		SetBTMonsterType(EMonsterType::EMT_Move);
+		FAIMoveRequest MoveRequest;
+		MoveRequest.SetGoalActor(_Target);
+		
+		const float Distance = FMath::RandRange(_Min_Circle, _Max_Circle);
+		MoveRequest.SetAcceptanceRadius(Distance);
+		FNavPathSharedPtr NavPath;
+
+		EnemyController->MoveToActor(_Target, Distance,true, true);
+		//상태 스피드.. 등등..		
+	}
+}
+
+void AEnemyCharacter::MoveInCircle(ADemoCharacterBase* _Target)
+{
+	
 }
 
 float AEnemyCharacter::PlayHighPriorityMontage(UAnimMontage* Montage, FName StartSectionName, float InPlayRate)
@@ -150,20 +172,16 @@ float AEnemyCharacter::PlayHighPriorityMontage(UAnimMontage* Montage, FName Star
 
 void AEnemyCharacter::TickAttackRangeCalculate()
 {
-	
-	switch (MonsterAttackRange)
+	float Distance  = GetDistanceTo(Player);
+	if(Distance < 200.f)
 	{
-	case EMonsterAttackRange::EMAR_DefaultAttackRange:
-		{
-			float Distance  = GetDistanceTo(Player);
-			if(Distance <= DefaultAttackRange)
-			{
-				//거리 +70
-				SetBTMonsterType(EMonsterType::EMT_Attack);
-			}	
-		}
-	default:
-		;
+		SetBTMonsterType(EMonsterType::EMT_Attack);
+	}else if(Distance < 600.f)
+	{
+		//SetBTMonsterType(EMonsterType::EMT_Circle);
+	}else
+	{
+		SetBTMonsterType(EMonsterType::EMT_Move);
 	}
 }
 
@@ -171,12 +189,10 @@ void AEnemyCharacter::DefaultAttack()
 {
 	if(GetMonsterType()==EMonsterType::EMT_Dead) return;
 	
-	SetBTMonsterType(EMonsterType::EMT_Attacking);
+	//SetBTMonsterType(EMonsterType::EMT_Attacking);
 
     //UE_LOG(LogTemp, Warning, TEXT("DefaultAttack()"));
-	PlayHighPriorityMontage(DefaultAttackMontage,FName("Attack"),DefulatAttackPlayRate);
-	
-	SetBTMonsterType(EMonsterType::EMT_Move);
+	PlayHighPriorityMontage(DefaultAttackMontage,FName("Attack"),DefaultAttackPlayRate);
 }
 
 /*

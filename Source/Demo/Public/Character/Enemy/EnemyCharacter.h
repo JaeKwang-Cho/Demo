@@ -17,6 +17,7 @@ enum class EMonsterType : uint8
 {
 	EMT_Idle	UMETA(DisplayName = "Idle"),	//플레이어 못찾았을떄 
 	EMT_Move	UMETA(DisplayName = "Move"),	//플레이어 찾고 쫓아갈때 (전진, 후진, 경계..)
+	EMT_Circle	UMETA(DisplayName = "Circle"),
 	EMT_Attack	UMETA(DisplayName = "Attack"),	//공격할때 
 	EMT_Attacking	UMETA(DisplayName = "Attacking"),	//공격할때 
 	EMT_Dead	UMETA(DisplayName = "Dead"),	//HP 0일때
@@ -28,7 +29,8 @@ UENUM(BlueprintType)
 enum class EMonsterAttackRange : uint8
 {
 	EMAR_DefaultAttackRange	UMETA(DisplayName = "DefaultAttackRange"),	//무기상태
-	
+	EMAR_CirclingRange_MAX UMETA(DisplayName = "CirclingRange_Max"),
+	EMAR_CirclingRange_Min UMETA(DisplayName = "CirclingRange_Min"), // 대치 상태
 	EMAR_Max		UMETA(DisplayName = "Max")
 };
 
@@ -70,9 +72,16 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	void MoveToTarget(ADemoCharacterBase* _Target, float _AcceptanceRadius);
 
+	UFUNCTION(BlueprintCallable)
+	void MoveToCircleRange(ADemoCharacterBase* _Target);
+
+	UFUNCTION(BlueprintCallable)
+	void MoveInCircle(ADemoCharacterBase* _Target);
+
 	float PlayHighPriorityMontage(UAnimMontage* Montage, FName StartSectionName, float InPlayRate);
 	
 protected:
+	UFUNCTION(BlueprintCallable)
 	virtual void TickAttackRangeCalculate();
 	
 	virtual void DefaultAttack();
@@ -92,6 +101,12 @@ protected:
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | Enum",meta = (AllowPrivateAccess = "true"))
 	EMonsterAttackRange MonsterAttackRange;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Combat | Distance",meta = (AllowPrivateAccess = "true"))
+	float _Min_Circle = 300;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Combat | Distance",meta = (AllowPrivateAccess = "true"))
+	float _Max_Circle = 500;
 	
 	UPROPERTY()
 	ADemoCharacterBase* Player;
@@ -123,7 +138,7 @@ private:
 
 	//DB
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Parent | Status", meta = (AllowPrivateAccess = "true"))
-	float DefulatAttackPlayRate;
+	float DefaultAttackPlayRate;
 
 
 
