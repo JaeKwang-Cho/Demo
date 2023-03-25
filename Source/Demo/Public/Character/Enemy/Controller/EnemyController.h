@@ -24,7 +24,7 @@ protected:
 	
 protected:
 	UPROPERTY(BlueprintReadWrite,Category = "AI Behavior",meta = (AllowPrivateAccess = "true"))
-	class UBlackboardComponent* BlackboardComponent;
+	class UBlackboardComponent*  BlackboardComponent;
 	
 	UPROPERTY(BlueprintReadWrite,Category = "AI Behavior",meta = (AllowPrivateAccess = "true"))
 	class UBehaviorTreeComponent* BehaviorTreeComponent;

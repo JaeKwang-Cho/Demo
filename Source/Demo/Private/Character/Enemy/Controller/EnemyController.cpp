@@ -13,12 +13,13 @@
 AEnemyController::AEnemyController(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
+	
 	BlackboardComponent = CreateDefaultSubobject<UBlackboardComponent>(TEXT("BlackboardComponent"));
 	check(BlackboardComponent);
 
 	BehaviorTreeComponent = CreateDefaultSubobject<UBehaviorTreeComponent>(TEXT("BehaviorTreeComponent"));
 	check(BehaviorTreeComponent);
-
+	
 	SetPerceptionComponent(*ObjectInitializer.CreateDefaultSubobject<UAIPerceptionComponent>(this,TEXT("AIPerception Component")));
 
 	Sight = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("Sight Config"));

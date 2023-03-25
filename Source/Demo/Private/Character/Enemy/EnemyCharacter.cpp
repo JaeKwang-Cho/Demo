@@ -154,11 +154,13 @@ void AEnemyCharacter::TickAttackRangeCalculate()
 	switch (MonsterAttackRange)
 	{
 	case EMonsterAttackRange::EMAR_DefaultAttackRange:
-
-		if(GetDistanceTo(Player) <= DefaultAttackRange)
 		{
-			//거리 +70
-			SetBTMonsterType(EMonsterType::EMT_Attack);
+			float Distance  = GetDistanceTo(Player);
+			if(Distance <= DefaultAttackRange)
+			{
+				//거리 +70
+				SetBTMonsterType(EMonsterType::EMT_Attack);
+			}	
 		}
 	default:
 		;
@@ -171,10 +173,10 @@ void AEnemyCharacter::DefaultAttack()
 	
 	SetBTMonsterType(EMonsterType::EMT_Attacking);
 
+    //UE_LOG(LogTemp, Warning, TEXT("DefaultAttack()"));
 	PlayHighPriorityMontage(DefaultAttackMontage,FName("Attack"),DefulatAttackPlayRate);
-
-	if(EnemyController)
-		EnemyController->StopMovement();
+	
+	SetBTMonsterType(EMonsterType::EMT_Move);
 }
 
 /*
