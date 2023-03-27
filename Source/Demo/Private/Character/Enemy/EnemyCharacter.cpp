@@ -11,6 +11,18 @@
 #include "Character/Player/DemoPlayerCharacterBase.h"
 //#include "Character/Player/Camera/BOTWPlayerCameraManager.h"
 #include "Interfaces/ITargetDevice.h"
+#include "Components/CapsuleComponent.h"
+
+#include "Character/AbilitySystem/CharacterAbilitySystemComponent.h"
+#include "Character/AbilitySystem/AttributeSets/CharacterAttributeSetBase.h"
+#include "Character/AbilitySystem/CharacterGameplayAbility.h"
+
+#include "Animation/AnimMontage.h"
+#include "GameplayEffect.h"
+#include "UObject/UObjectGlobals.h"
+#include "GameplayAbilitySpec.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
 #include "Kismet/GameplayStatics.h"
 
 AEnemyCharacter::AEnemyCharacter(const FObjectInitializer& ObjectInitializer)
@@ -26,6 +38,9 @@ DefaultAttackPlayRate(1.0f)
 
 	PawnSensingComponent = CreateDefaultSubobject<UPawnSensingComponent>(TEXT("PawnSensingComponent"));
 
+	DeadTag = FGameplayTag::RequestGameplayTag(FName("State.Dead"));
+	EffectRemoveOnDeathTag = FGameplayTag::RequestGameplayTag(FName("State.RemoveOnDeath"));
+
 	
 }
 
@@ -36,6 +51,95 @@ void AEnemyCharacter::OnHearNoise(APawn* PawnInstigator, const FVector& Location
 	if(_Controller && PawnInstigator!=this)
 	{
 		_Controller->SetSensedTarget(PawnInstigator);
+	}
+}
+
+void AEnemyCharacter::AddCharacterAbilities()
+{
+	if (!AbilitySystemComponent.IsValid() || AbilitySystemComponent->bCharacterAbilitiesGiven)
+	{
+		return;
+	}
+
+	for (TSubclassOf<UCharacterGameplayAbility>& StartupAbility : CharacterAbilities)
+	{
+		AbilitySystemComponent->GiveAbility(
+			FGameplayAbilitySpec(
+				StartupAbility, 
+				GetAbilityLevel(StartupAbility.GetDefaultObject()->AbilityID),
+				static_cast<int32>(StartupAbility.GetDefaultObject()->AbilityInputID),
+				this
+			)
+		);
+	}
+
+	AbilitySystemComponent->bCharacterAbilitiesGiven = true;
+}
+
+void AEnemyCharacter::InitializeAttributes()
+{
+	if (!AbilitySystemComponent.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s() AbilitySystemComponent isn't valid for %s"), *FString(__FUNCTION__), *GetName());
+		return;
+	}
+
+	if (!DefaultAttributes)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s() Missing DefaultAttirbutes for %s, Please fill in the character's Blueprint"), *FString(__FUNCTION__), *GetName());
+		return;
+	}
+
+	FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+	EffectContext.AddSourceObject(this);
+
+	FGameplayEffectSpecHandle NewHandle = AbilitySystemComponent->MakeOutgoingSpec(DefaultAttributes, GetCharacterLevel(), EffectContext);
+
+	if (NewHandle.IsValid())
+	{
+		FActiveGameplayEffectHandle ActiveGEHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*NewHandle.Data.Get(), AbilitySystemComponent.Get());
+	}else
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s() MakeOutgoingSpec isn't working"), *FString(__FUNCTION__), *GetName());
+	}
+}
+
+void AEnemyCharacter::AddStartupEffects()
+{
+	if (!AbilitySystemComponent.IsValid() || AbilitySystemComponent->bStartupEffectsApplied)
+	{
+		return;
+	}
+
+	FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+	EffectContext.AddSourceObject(this);
+
+	for (TSubclassOf<UGameplayEffect> GameplayEffect : StartupEffects)
+	{
+		FGameplayEffectSpecHandle NewHandle = AbilitySystemComponent->MakeOutgoingSpec(GameplayEffect, GetCharacterLevel(), EffectContext);
+
+		if (NewHandle.IsValid())
+		{
+			FActiveGameplayEffectHandle ActiveGEHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*NewHandle.Data.Get(), AbilitySystemComponent.Get());
+		}
+	}
+
+	AbilitySystemComponent->bStartupEffectsApplied = true;
+}
+
+void AEnemyCharacter::SetHealth(float health)
+{
+	if (AttributeSetBase.IsValid())
+	{
+		AttributeSetBase->SetHealth(health);
+	}
+}
+
+void AEnemyCharacter::SetMana(float Mana)
+{
+	if (AttributeSetBase.IsValid())
+	{
+		AttributeSetBase->SetMana(Mana);
 	}
 }
 
@@ -229,6 +333,130 @@ void AEnemyCharacter::ExecuteVisitor(FString key)
 	auto it = Visitors.find(key);
 	if(it != Visitors.end())
 		Accept(it->second);
+}
+
+UAbilitySystemComponent* AEnemyCharacter::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent.Get();
+}
+
+bool AEnemyCharacter::IsAlive() const
+{
+	return GetHealth() > 0.f;
+}
+
+int32 AEnemyCharacter::GetAbilityLevel(DemoAbilityID AbilityID) const
+{
+	return 1;
+}
+
+void AEnemyCharacter::RemoveCharacterAbilities()
+{
+	if (!AbilitySystemComponent.IsValid() || !AbilitySystemComponent->bCharacterAbilitiesGiven)
+	{
+		return;
+	}
+
+	TArray<FGameplayAbilitySpecHandle> AbilitiesToRemove;
+	for (const FGameplayAbilitySpec& Spec : AbilitySystemComponent->GetActivatableAbilities())
+	{
+		if ((Spec.SourceObject == this) && CharacterAbilities.Contains(Spec.Ability->GetClass()))
+		{
+			AbilitiesToRemove.Add(Spec.Handle);
+		}
+	}
+
+	for (int32 i = 0; i < AbilitiesToRemove.Num(); i++)
+	{
+		AbilitySystemComponent->ClearAbility(AbilitiesToRemove[i]);
+	}
+
+	AbilitySystemComponent->bCharacterAbilitiesGiven = false;
+}
+
+void AEnemyCharacter::Die()
+{
+	RemoveCharacterAbilities();
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetCharacterMovement()->GravityScale = 0;
+	GetCharacterMovement()->Velocity = FVector(0);
+
+	OnEnemyDied.Broadcast(this);
+
+	if (AbilitySystemComponent.IsValid())
+	{
+		AbilitySystemComponent->CancelAbilities();
+
+		FGameplayTagContainer EffectsTagsToRemove;
+		EffectsTagsToRemove.AddTag(EffectRemoveOnDeathTag);
+		int32 NumEffectsRemoved = AbilitySystemComponent->RemoveActiveEffectsWithTags(EffectsTagsToRemove);
+		AbilitySystemComponent->AddLooseGameplayTag(DeadTag);
+	}
+
+	if (DeathMontage)
+	{
+		PlayAnimMontage(DeathMontage);
+	}
+	else
+	{
+		FinishDying();
+	}
+}
+
+void AEnemyCharacter::FinishDying()
+{
+	Destroy();
+}
+
+int32 AEnemyCharacter::GetCharacterLevel() const
+{
+	if (AttributeSetBase.IsValid())
+	{
+		return AttributeSetBase->GetLevel();
+	}
+
+	return 0;
+}
+
+float AEnemyCharacter::GetHealth() const
+{
+	if(AttributeSetBase.IsValid())
+	{
+		return AttributeSetBase->GetHealth();
+	}
+
+	return 0.f;
+}
+
+float AEnemyCharacter::GetMaxHealth() const
+{
+	if (AttributeSetBase.IsValid())
+	{
+		return AttributeSetBase->GetMaxHealth();
+	}
+
+	return 0.f;
+}
+
+float AEnemyCharacter::GetMana() const
+{
+	if (AttributeSetBase.IsValid())
+	{
+		return AttributeSetBase->GetMana();
+	}
+
+	return 0.f;
+}
+
+float AEnemyCharacter::GetMaxMana() const
+{
+	if (AttributeSetBase.IsValid())
+	{
+		return AttributeSetBase->GetMaxMana();
+	}
+
+	return 0.f;
 }
 
 

@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Character/Enemy/EnemyCharacter.h"
+#include "GameplayTagContainer.h"
+
 #include "EnemyPanchi.generated.h"
 
 /**
@@ -28,6 +30,11 @@ protected:
 	
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void OnConstruction(const FTransform& Transform) override;
+
+	FGameplayTag DeadTag;
+	FGameplayTag StunTag;
+
+	void InitializeStartingValues(class ADemoPlayerState* PS);
 
 
 private:

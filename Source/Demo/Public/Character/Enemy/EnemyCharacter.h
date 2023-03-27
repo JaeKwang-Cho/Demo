@@ -8,9 +8,16 @@
 #include "../DemoCharacterBase.h"
 #include "Cores/BTVisitor.h"
 #include "PErception/PawnSensingComponent.h"
+
+#include "GameFramework/Character.h"
+#include "AbilitySystemInterface.h"
+#include "GameplayTagContainer.h"
+
 #include "EnemyCharacter.generated.h"
 
 class ADemoCharacterBase;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEnemyDiedDelegate, AEnemyCharacter*, Character);
 
 UENUM(BlueprintType)
 enum class EMonsterType : uint8
@@ -35,7 +42,7 @@ enum class EMonsterAttackRange : uint8
 };
 
 UCLASS()
-class DEMO_API AEnemyCharacter : public ACharacter
+class DEMO_API AEnemyCharacter : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 public:
@@ -51,6 +58,74 @@ public:
 	void ExecuteVisitor(FString key);
 
 	virtual void Accept(VisitorPtr Visitor) {};
+
+	/*
+	 * GAS
+	 */
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	
+	UPROPERTY(BlueprintAssignable, Category = "Demo|Enemy")
+	FEnemyDiedDelegate OnEnemyDied;
+
+	UFUNCTION(BlueprintCallable, Category = "Demo|Enemy")
+	virtual bool IsAlive() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Demo|Enemy")
+	virtual int32 GetAbilityLevel(DemoAbilityID AbilityID) const;
+
+	virtual void RemoveCharacterAbilities();
+
+	virtual void Die();
+
+	UFUNCTION(BlueprintCallable, Category = "Demo|Enemy")
+	virtual void FinishDying();
+
+	UFUNCTION(BlueprintCallable, Category = "Demo|Enemy|Attributes")
+	int32 GetCharacterLevel() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Demo|Enemy|Attributes")
+	float GetHealth() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Demo|Enemy|Attributes")
+	float GetMaxHealth() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Demo|Enemy|Attributes")
+	float GetMana() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Demo|Enemy|Attributes")
+	float GetMaxMana() const;
+
+protected:
+	TWeakObjectPtr<class UCharacterAbilitySystemComponent> AbilitySystemComponent;
+	TWeakObjectPtr<class UCharacterAttributeSetBase> AttributeSetBase;
+
+	FGameplayTag DeadTag;
+	FGameplayTag EffectRemoveOnDeathTag;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Demo|Character")
+	FText CharacterName;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Demo|Animation")
+	class UAnimMontage* DeathMontage;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Demo|Abilities")
+	TArray<TSubclassOf<class UCharacterGameplayAbility>> CharacterAbilities;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Demo|Abilities")
+	TSubclassOf<class UGameplayEffect> DefaultAttributes;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Demo|Abilities")
+	TArray<TSubclassOf<class UGameplayEffect>> StartupEffects;
+
+	virtual void AddCharacterAbilities();
+
+	virtual void InitializeAttributes();
+
+	virtual void AddStartupEffects();
+
+	virtual void SetHealth(float health);
+
+	virtual void SetMana(float Mana);
 	
 protected:
 	virtual void BeginPlay() override;
