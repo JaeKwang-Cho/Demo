@@ -22,12 +22,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEnemyDiedDelegate, AEnemyCharacter*
 UENUM(BlueprintType)
 enum class EMonsterType : uint8
 {
-	EMT_Idle	UMETA(DisplayName = "Idle"),	//플레이어 못찾았을떄 
-	EMT_Move	UMETA(DisplayName = "Move"),	//플레이어 찾고 쫓아갈때 (전진, 후진, 경계..)
+	EMT_Idle	UMETA(DisplayName = "Idle"),	
+	EMT_Move	UMETA(DisplayName = "Move"),	
 	EMT_Circle	UMETA(DisplayName = "Circle"),
-	EMT_Attack	UMETA(DisplayName = "Attack"),	//공격할때 
-	EMT_Attacking	UMETA(DisplayName = "Attacking"),	//공격할때 
-	EMT_Dead	UMETA(DisplayName = "Dead"),	//HP 0일때
+	EMT_Attack	UMETA(DisplayName = "Attack"),	
+	EMT_Attacking	UMETA(DisplayName = "Attacking"),	
+	EMT_Dead	UMETA(DisplayName = "Dead"),	
 	
 	EMT_Max		UMETA(DisplayName = "Max")
 };
@@ -35,9 +35,9 @@ enum class EMonsterType : uint8
 UENUM(BlueprintType)
 enum class EMonsterAttackRange : uint8
 {
-	EMAR_DefaultAttackRange	UMETA(DisplayName = "DefaultAttackRange"),	//무기상태
+	EMAR_DefaultAttackRange	UMETA(DisplayName = "DefaultAttackRange"),	
 	EMAR_CirclingRange_MAX UMETA(DisplayName = "CirclingRange_Max"),
-	EMAR_CirclingRange_Min UMETA(DisplayName = "CirclingRange_Min"), // 대치 상태
+	EMAR_CirclingRange_Min UMETA(DisplayName = "CirclingRange_Min"), 
 	EMAR_Max		UMETA(DisplayName = "Max")
 };
 
@@ -58,7 +58,6 @@ public:
 	void ExecuteVisitor(FString key);
 
 	virtual void Accept(VisitorPtr Visitor) {};
-
 	/*
 	 * GAS
 	 */
@@ -96,17 +95,14 @@ public:
 	float GetMaxMana() const;
 
 protected:
+	/*
+	 * GAS
+	 */
 	TWeakObjectPtr<class UCharacterAbilitySystemComponent> AbilitySystemComponent;
 	TWeakObjectPtr<class UCharacterAttributeSetBase> AttributeSetBase;
 
 	FGameplayTag DeadTag;
 	FGameplayTag EffectRemoveOnDeathTag;
-
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Demo|Character")
-	FText CharacterName;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Demo|Animation")
-	class UAnimMontage* DeathMontage;
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Demo|Abilities")
 	TArray<TSubclassOf<class UCharacterGameplayAbility>> CharacterAbilities;
@@ -126,10 +122,21 @@ protected:
 	virtual void SetHealth(float health);
 
 	virtual void SetMana(float Mana);
+
+	/*
+	 *Anim
+	 */
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Demo|Character")
+	FText CharacterName;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Demo|Animation")
+	class UAnimMontage* DeathMontage;
 	
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+
+	virtual void PossessedBy(AController* NewController) override;
 	
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void OnConstruction(const FTransform& Transform) override;
@@ -207,7 +214,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Parent | UITimer", meta = (AllowPrivateAccess = "true"))
 	float HealthBarDisplayTime;
 
-	//추후 DB로 뺄것 
+	//추후 DB�?뺄것 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Parent | Status", meta = (AllowPrivateAccess = "true"))
 	float DefaultAttackRange;
 

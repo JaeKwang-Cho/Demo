@@ -5,11 +5,10 @@
 
 #include "Components/WidgetComponent.h"
 
-#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Player/DemoPlayerState.h"
 #include "Character/AbilitySystem/CharacterAbilitySystemComponent.h"
 #include "Character/AbilitySystem/AttributeSets/CharacterAttributeSetBase.h"
+#include "Character/Enemy/Controller/EnemyController.h"
 
 AEnemyPanchi::AEnemyPanchi(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
@@ -29,21 +28,22 @@ AEnemyPanchi::AEnemyPanchi(const FObjectInitializer& ObjectInitializer)
 void AEnemyPanchi::BeginPlay()
 {
 	Super::BeginPlay();
-
-	ADemoPlayerState* PS = GetPlayerState< ADemoPlayerState>();
-	if (PS)
-	{
-		InitializeStartingValues(PS);
-
-		AddStartupEffects();
-		AddCharacterAbilities();
-	}
 }
 
 void AEnemyPanchi::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	//UIFindLookPlayer(HealthBarWidget);
+}
+
+void AEnemyPanchi::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	InitializeStartingValues();
+
+	AddStartupEffects();
+	AddCharacterAbilities();
 }
 
 void AEnemyPanchi::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -56,21 +56,31 @@ void AEnemyPanchi::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 }
 
-void AEnemyPanchi::InitializeStartingValues(ADemoPlayerState* PS)
+void AEnemyPanchi::InitializeStartingValues()
 {
+	
 	UE_LOG(LogTemp, Warning, TEXT("Panchi InitializeStartingValues"));
-	AbilitySystemComponent = Cast<UCharacterAbilitySystemComponent>(PS->GetAbilitySystemComponent());
 
-	AbilitySystemComponent.Get()->InitAbilityActorInfo(PS, this);
+	if(EnemyController)
+	{
+		AbilitySystemComponent = Cast<UCharacterAbilitySystemComponent>(EnemyController->GetAbilitySystemComponent());
 
-	AttributeSetBase = PS->GetAttributeSetBase();
+		AbilitySystemComponent->InitAbilityActorInfo(EnemyController, this);
 
-	AbilitySystemComponent->SetTagMapCount(DeadTag, 0);
+		AttributeSetBase = EnemyController->GetAttributeSetBase();
 
-	InitializeAttributes();
+		AbilitySystemComponent->SetTagMapCount(DeadTag, 0);
 
-	SetHealth(GetMaxHealth());
-	SetMana(GetMaxMana());
+		InitializeAttributes();
+
+		SetHealth(GetMaxHealth());
+		SetMana(GetMaxMana());
+	}else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Panchi InitializeStartingValues is Failed"));
+	}
+	
+	
 }
 
 void AEnemyPanchi::DefaultAttack()

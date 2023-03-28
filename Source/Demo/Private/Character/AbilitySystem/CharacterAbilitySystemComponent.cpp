@@ -6,6 +6,4 @@
 void UCharacterAbilitySystemComponent::ReceiveDamage(UCharacterAbilitySystemComponent* sourceASC, float UnmitigatedDamage, float MitigatedDamage)
 {
 	ReceivedDamage.Broadcast(sourceASC, UnmitigatedDamage, MitigatedDamage);
-
-
 }

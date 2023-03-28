@@ -3,7 +3,6 @@
 
 #include "Player/DemoPlayerState.h"
 #include "Demo/Public/Character/AbilitySystem/CharacterAbilitySystemComponent.h"
-#include "Character/AbilitySystem/CharacterAbilitySystemComponent.h"
 #include "Character/AbilitySystem/AttributeSets/CharacterAttributeSetBase.h"
 
 ADemoPlayerState::ADemoPlayerState()
@@ -118,7 +117,5 @@ void ADemoPlayerState::StunTagChanged(const FGameplayTag CallbackTag, int32 NewC
 		AbilitySystemComponent->CancelAbilities(&AbilityTagsToCancel, &AbilityTagsToIgnore);
 
 		UE_LOG(LogTemp, Warning, TEXT("StunTagChanged"));
-	}
-
-	
+	}	
 }

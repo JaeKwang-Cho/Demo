@@ -35,22 +35,18 @@ DefaultAttackRange(200.f),
 DefaultAttackPlayRate(1.0f)
 {
 	PrimaryActorTick.bCanEverTick = true;
-
+	
 	PawnSensingComponent = CreateDefaultSubobject<UPawnSensingComponent>(TEXT("PawnSensingComponent"));
 
 	DeadTag = FGameplayTag::RequestGameplayTag(FName("State.Dead"));
 	EffectRemoveOnDeathTag = FGameplayTag::RequestGameplayTag(FName("State.RemoveOnDeath"));
-
-	
 }
 
 void AEnemyCharacter::OnHearNoise(APawn* PawnInstigator, const FVector& Location, float Volume)
 {
-	AEnemyController* _Controller = Cast<AEnemyController>(GetController());
-
-	if(_Controller && PawnInstigator!=this)
+	if(EnemyController && PawnInstigator!=this)
 	{
-		_Controller->SetSensedTarget(PawnInstigator);
+		EnemyController->SetSensedTarget(PawnInstigator);
 	}
 }
 
@@ -154,7 +150,7 @@ void AEnemyCharacter::BeginPlay()
 	SpawnDefaultController();
 
 	//Get AIController
-	EnemyController = Cast<AEnemyController>(GetController());
+	//EnemyController = Cast<AEnemyController>(GetController());
 	if(EnemyController)
 	{
 		EnemyController->RunBehaviorTree(BehaviorTree);
@@ -178,6 +174,14 @@ void AEnemyCharacter::Tick(float DeltaTime)
 		TickAttackRangeCalculate();
 	}
 	*/
+}
+
+void AEnemyCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	EnemyController = Cast<AEnemyController>(NewController);
+	UE_LOG(LogTemp, Warning, TEXT("Get AI Controller = EnemyController"));
 }
 
 void AEnemyCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)

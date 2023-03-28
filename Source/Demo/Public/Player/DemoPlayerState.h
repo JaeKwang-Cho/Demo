@@ -21,7 +21,7 @@ class DEMO_API ADemoPlayerState: public APlayerState, public IAbilitySystemInter
 public:
 	ADemoPlayerState();
 
-	class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	class UCharacterAttributeSetBase* GetAttributeSetBase() const;
 

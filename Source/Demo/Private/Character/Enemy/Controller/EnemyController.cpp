@@ -2,12 +2,17 @@
 
 
 #include "Character/Enemy/Controller/EnemyController.h"
+
+#include "AbilitySystemComponent.h"
 #include "Character/Enemy/EnemyCharacter.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "Character/Player/DemoPlayerCharacterBase.h"
 #include "Perception/AISenseConfig_Sight.h"
+
+#include "Demo/Public/Character/AbilitySystem/CharacterAbilitySystemComponent.h"
+#include "Character/AbilitySystem/AttributeSets/CharacterAttributeSetBase.h"
 
 
 AEnemyController::AEnemyController(const FObjectInitializer& ObjectInitializer)
@@ -30,6 +35,14 @@ AEnemyController::AEnemyController(const FObjectInitializer& ObjectInitializer)
 
 	GetAIPerceptionComponent()->ConfigureSense(*Sight);
 	GetAIPerceptionComponent()->SetDominantSense(Sight->GetSenseImplementation());
+
+	/* GAS */
+	AttributeSetBase = CreateDefaultSubobject<UCharacterAttributeSetBase>(TEXT("AttributeSetBase"));
+
+	//NetUpdateFrequency = 100.f
+
+	AbilitySystemComponent = CreateDefaultSubobject<UCharacterAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	DeadTag = FGameplayTag::RequestGameplayTag(FName("State.Dead"));
 }
 
 void AEnemyController::OnPossess(APawn* InPawn)
@@ -50,6 +63,11 @@ void AEnemyController::OnPossess(APawn* InPawn)
 	}
 
 	GetAIPerceptionComponent()->OnTargetPerceptionUpdated.AddUniqueDynamic(this,&ThisClass::OnPerception);
+
+	/*
+	 * GAS
+	 */
+	GetAbilitySystemComponent()->InitAbilityActorInfo(this, InPawn);
 }
 
 void AEnemyController::BeginPlay()
@@ -59,6 +77,17 @@ void AEnemyController::BeginPlay()
 	if(Player)
 	{
 		PlayerCharacter=Player;
+	}
+
+	if (AbilitySystemComponent)
+	{
+		HealthChangedDelegateHandle = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSetBase->GetHealthAttribute()).AddUObject(this, &AEnemyController::HealthChanged);
+		MaxHealthChangedDelegateHandle = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSetBase->GetMaxHealthAttribute()).AddUObject(this, &AEnemyController::MaxHealthChanged);
+		ManaChangedDelegateHandle = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSetBase->GetManaAttribute()).AddUObject(this, &AEnemyController::ManaChanged);
+		MaxManaChangedDelegateHandle = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSetBase->GetMaxManaAttribute()).AddUObject(this, &AEnemyController::MaxManaChanged);
+		CharacterLevelChangedDelegateHandle = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSetBase->GetLevelAttribute()).AddUObject(this, &AEnemyController::CharacterLevelChanged);
+
+		AbilitySystemComponent->RegisterGameplayTagEvent(FGameplayTag::RequestGameplayTag(FName("State.Debuff.Stun")), EGameplayTagEventType::NewOrRemoved).AddUObject(this, &AEnemyController::StunTagChanged);
 	}
 }
 
@@ -106,6 +135,91 @@ void AEnemyController::SetSensedTarget(APawn* NewTarget)
 				EnemyCharacter->SetBTMonsterType(EMonsterType::EMT_Move);
 			}
 		}
+	}
+}
+
+UAbilitySystemComponent* AEnemyController::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
+}
+
+UCharacterAttributeSetBase* AEnemyController::GetAttributeSetBase() const
+{
+	return AttributeSetBase;
+}
+
+bool AEnemyController::IsAlive() const
+{
+	return GetHealth() > 0.f;
+}
+
+void AEnemyController::ShowAbilityConfirmCancelText(bool ShowText)
+{
+}
+
+float AEnemyController::GetHealth() const
+{
+	return AttributeSetBase->GetHealth();
+}
+
+float AEnemyController::GetMaxHealth() const
+{
+	return AttributeSetBase->GetMaxHealth();
+}
+
+float AEnemyController::GetMana() const
+{
+	return AttributeSetBase->GetMana();
+}
+
+float AEnemyController::GetMaxMana() const
+{
+	return AttributeSetBase->GetMaxMana();
+}
+
+int32 AEnemyController::GetCharacterLevel() const
+{
+	return AttributeSetBase->GetLevel();
+}
+
+void AEnemyController::HealthChanged(const FOnAttributeChangeData& Data)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Enemy HealthChanged"));
+}
+
+void AEnemyController::MaxHealthChanged(const FOnAttributeChangeData& Data)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Enemy MaxHealthChanged"));
+}
+
+void AEnemyController::ManaChanged(const FOnAttributeChangeData& Data)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Enemy ManaChanged"));
+}
+
+void AEnemyController::MaxManaChanged(const FOnAttributeChangeData& Data)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Enemy MaxManaChanged"));
+}
+
+void AEnemyController::CharacterLevelChanged(const FOnAttributeChangeData& Data)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Enemy rLevelChanged"));
+}
+
+void AEnemyController::StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
+{
+	if (NewCount > 0)
+	{
+		FGameplayTagContainer AbilityTagsToCancel;
+		AbilityTagsToCancel.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability")));
+
+		FGameplayTagContainer AbilityTagsToIgnore;
+		AbilityTagsToCancel.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.NotCancelByStun")));
+
+		AbilitySystemComponent->CancelAbilities(&AbilityTagsToCancel, &AbilityTagsToIgnore);
+
+		UE_LOG(LogTemp, Warning, TEXT("StunTagChanged"));
 	}
 }
 
