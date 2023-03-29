@@ -167,6 +167,17 @@ protected:
 	virtual void TickAttackRangeCalculate();
 	
 	virtual void DefaultAttack();
+
+	UFUNCTION(BlueprintCallable)
+	virtual void DefaultThrow();
+
+public:
+
+	virtual void SpawnThrows(FVector WorldLocation);
+
+	virtual void SetThrowsLocation(FVector WorldLocation);
+
+	virtual void LaunchThrows(FVector StartLocation);
 	
 protected:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | BT",meta = (AllowPrivateAccess = "true"))
@@ -196,6 +207,15 @@ protected:
 	//DB
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | Montage",meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* DefaultAttackMontage;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | Montage",meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* DefaultThrowMontage;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | Montage",meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<class ADefaultThrows> DefaultThrowsClass;
+
+	UPROPERTY()
+	ADefaultThrows* DefaultThrows;
 	/*
 	 *BT Visitor 
 	 */

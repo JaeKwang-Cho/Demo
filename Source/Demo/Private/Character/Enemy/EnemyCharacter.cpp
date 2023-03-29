@@ -21,6 +21,7 @@
 #include "GameplayEffect.h"
 #include "UObject/UObjectGlobals.h"
 #include "GameplayAbilitySpec.h"
+#include "Character/Enemy/Combat/Throws/DefaultThrows.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 #include "Kismet/GameplayStatics.h"
@@ -301,6 +302,41 @@ void AEnemyCharacter::DefaultAttack()
 
     //UE_LOG(LogTemp, Warning, TEXT("DefaultAttack()"));
 	PlayHighPriorityMontage(DefaultAttackMontage,FName("Attack"),DefaultAttackPlayRate);
+}
+
+void AEnemyCharacter::DefaultThrow()
+{
+	if(GetMonsterType()==EMonsterType::EMT_Dead) return;
+	
+	//SetBTMonsterType(EMonsterType::EMT_Attacking);
+
+	//UE_LOG(LogTemp, Warning, TEXT("DefaultAttack()"));
+	PlayHighPriorityMontage(DefaultThrowMontage,FName("Throw"),DefaultAttackPlayRate);
+}
+
+void AEnemyCharacter::SpawnThrows(const FVector WorldLocation)
+{
+	const FRotator& Rotator = FRotator::ZeroRotator; 
+	DefaultThrows = GetWorld()->SpawnActor<ADefaultThrows>(DefaultThrowsClass.Get(), WorldLocation, Rotator);
+	DefaultThrows->Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+
+void AEnemyCharacter::SetThrowsLocation(FVector WorldLocation)
+{
+	DefaultThrows->SetActorLocation(WorldLocation);
+}
+
+void AEnemyCharacter::LaunchThrows(FVector StartLocation)
+{
+	FVector PlayerLocation = Player->GetActorLocation();
+	FVector Direction = PlayerLocation - StartLocation;
+	Direction.Normalize(SMALL_NUMBER);
+
+	Direction *= 2000.f;
+
+	DefaultThrows->Body->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	DefaultThrows->Body->AddImpulse(Direction);
+	
 }
 
 /*

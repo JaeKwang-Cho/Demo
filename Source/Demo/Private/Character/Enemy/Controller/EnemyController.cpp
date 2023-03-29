@@ -14,6 +14,8 @@
 #include "Demo/Public/Character/AbilitySystem/CharacterAbilitySystemComponent.h"
 #include "Character/AbilitySystem/AttributeSets/CharacterAttributeSetBase.h"
 
+#include "Character/Enemy/EnemyCharacter.h"
+
 
 AEnemyController::AEnemyController(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
@@ -219,7 +221,15 @@ void AEnemyController::StunTagChanged(const FGameplayTag CallbackTag, int32 NewC
 
 		AbilitySystemComponent->CancelAbilities(&AbilityTagsToCancel, &AbilityTagsToIgnore);
 
-		UE_LOG(LogTemp, Warning, TEXT("StunTagChanged"));
+		UE_LOG(LogTemp, Warning, TEXT("Enemy StunTagChanged above 0"));
+
+		BehaviorTreeComponent->StopTree();
+		BehaviorTreeComponent->SetComponentTickEnabled(false);
+	}else
+	{
+		BehaviorTreeComponent->StartTree(*EnemyCharacter->GetBehaviorTree(),EBTExecutionMode::Looped);
+		BehaviorTreeComponent->SetComponentTickEnabled(true);
+		UE_LOG(LogTemp, Warning, TEXT("Enemy StunTagChanged Below 0"));
 	}
 }
 
