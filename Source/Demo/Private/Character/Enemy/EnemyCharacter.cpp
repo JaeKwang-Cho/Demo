@@ -318,7 +318,7 @@ void AEnemyCharacter::SpawnThrows(const FVector WorldLocation)
 {
 	const FRotator& Rotator = FRotator::ZeroRotator; 
 	DefaultThrows = GetWorld()->SpawnActor<ADefaultThrows>(DefaultThrowsClass.Get(), WorldLocation, Rotator);
-	DefaultThrows->Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	DefaultThrows->Body->IgnoreActorWhenMoving(this, true);
 }
 
 void AEnemyCharacter::SetThrowsLocation(FVector WorldLocation)
@@ -333,8 +333,7 @@ void AEnemyCharacter::LaunchThrows(FVector StartLocation)
 	Direction.Normalize(SMALL_NUMBER);
 
 	Direction *= 2000.f;
-
-	DefaultThrows->Body->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	
 	DefaultThrows->Body->AddImpulse(Direction);
 	
 }
