@@ -41,8 +41,6 @@ enum class EMonsterAttackRange : uint8
 	EMAR_Max		UMETA(DisplayName = "Max")
 };
 
-inline float ThrowsSpeed = 500;
-
 UCLASS()
 class DEMO_API AEnemyCharacter : public ACharacter, public IAbilitySystemInterface
 {

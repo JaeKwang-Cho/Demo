@@ -347,7 +347,7 @@ void AEnemyCharacter::SpawnThrows()
 	if(DefaultThrows)
 	{
 		FAttachmentTransformRules AttachRule(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, true);
-		DefaultThrows->AttachToComponent(GetMesh(), AttachRule, hand_Two_Socket);
+		DefaultThrows->AttachToComponent(GetMesh(), AttachRule, hand_Two_Socket);		
 	}
 }
 
@@ -366,11 +366,9 @@ void AEnemyCharacter::LaunchThrows()
 	UGameplayStatics::SuggestProjectileVelocity_CustomArc(GetWorld(), OutLaunchVector, BetweenHandsLocation.GetLocation(), Player->GetActorLocation());
 	
 	FRotator LookAtRotator = OutLaunchVector.Rotation();
-	ThrowsSpeed = OutLaunchVector.Length();
 	
 	DefaultThrows = GetWorld()->SpawnActor<ADefaultThrows>(DefaultThrowsClass.Get(), BetweenHandsLocation.GetLocation(), LookAtRotator);
-	DefaultThrows->SphereComponent->SetCollisionProfileName(TEXT("EnemyThrows"));
-
+	DefaultThrows->ProjectileMovementComponent->Velocity = OutLaunchVector;
 }
 
 /*

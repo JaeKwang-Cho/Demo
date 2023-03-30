@@ -8,8 +8,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 
-#include "Character/Enemy/EnemyCharacter.h"
-
 // Sets default values
 ADefaultThrows::ADefaultThrows()
 {
@@ -25,7 +23,7 @@ ADefaultThrows::ADefaultThrows()
 
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
 	ProjectileMovementComponent->SetUpdatedComponent(SphereComponent);
-	ProjectileMovementComponent->InitialSpeed = ThrowsSpeed;
+	ProjectileMovementComponent->InitialSpeed = 0.f;
 	ProjectileMovementComponent->MaxSpeed = 3000.f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
 	ProjectileMovementComponent->bShouldBounce = true;
@@ -37,7 +35,7 @@ void ADefaultThrows::BeginPlay()
 {	
 	Super::BeginPlay();
 
-	UE_LOG(LogTemp, Warning, TEXT("Initial Speed is %f"), ProjectileMovementComponent->InitialSpeed);
+	//UE_LOG(LogTemp, Warning, TEXT("Initial Speed is %f"), ProjectileMovementComponent->InitialSpeed);
 }
 
 // Called every frame
