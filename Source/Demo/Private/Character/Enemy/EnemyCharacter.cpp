@@ -26,6 +26,10 @@
 
 #include "Kismet/GameplayStatics.h"
 
+#include "Character/Enemy/EnemyAnimInstance.h"
+
+#include "DrawDebugHelpers.h"
+
 AEnemyCharacter::AEnemyCharacter(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer),
 MonsterType(EMonsterType::EMT_Idle),
@@ -205,6 +209,10 @@ void AEnemyCharacter::OnConstruction(const FTransform& Transform)
 	//DataTable & Dynamic Materials
 	
 	SetHp(GetMaxHp());
+
+	ThisCharacter = this;
+
+	AnimInstance = Cast<UEnemyAnimInstance>(GetMesh()->GetAnimInstance());
 }
 
 void AEnemyCharacter::ShowHealthBar_Implementation()
@@ -268,7 +276,7 @@ void AEnemyCharacter::MoveInCircle(ADemoCharacterBase* _Target)
 
 float AEnemyCharacter::PlayHighPriorityMontage(UAnimMontage* Montage, FName StartSectionName, float InPlayRate)
 {
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	//UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
 	if(!AnimInstance->Montage_IsPlaying(Montage))
 	{
@@ -294,48 +302,75 @@ void AEnemyCharacter::TickAttackRangeCalculate()
 	}
 }
 
-void AEnemyCharacter::DefaultAttack()
+UAnimMontage*  AEnemyCharacter::DefaultAttack()
 {
-	if(GetMonsterType()==EMonsterType::EMT_Dead) return;
+	if(GetMonsterType()==EMonsterType::EMT_Dead) return nullptr;
 	
 	//SetBTMonsterType(EMonsterType::EMT_Attacking);
 
     //UE_LOG(LogTemp, Warning, TEXT("DefaultAttack()"));
-	PlayHighPriorityMontage(DefaultAttackMontage,FName("Attack"),DefaultAttackPlayRate);
+	//PlayHighPriorityMontage(DefaultAttackMontage,FName("Attack"),DefaultAttackPlayRate);
+	if(AnimInstance)
+	{
+		return AnimInstance->GetDefaultAttackMontage();
+	}
+	return nullptr;
 }
 
-void AEnemyCharacter::DefaultThrow()
+UAnimMontage*  AEnemyCharacter::DefaultThrow()
 {
-	if(GetMonsterType()==EMonsterType::EMT_Dead) return;
+	if(GetMonsterType()==EMonsterType::EMT_Dead) return nullptr;
 	
 	//SetBTMonsterType(EMonsterType::EMT_Attacking);
 
 	//UE_LOG(LogTemp, Warning, TEXT("DefaultAttack()"));
-	PlayHighPriorityMontage(DefaultThrowMontage,FName("Throw"),DefaultAttackPlayRate);
+	//PlayHighPriorityMontage(DefaultThrowMontage,FName("Throw"),DefaultAttackPlayRate);
+	if(AnimInstance)
+	{
+		return AnimInstance->GetDefaultThrowMontage();
+	}
+	return nullptr;
 }
 
-void AEnemyCharacter::SpawnThrows(const FVector WorldLocation)
+void AEnemyCharacter::SpawnThrows()
 {
-	const FRotator& Rotator = FRotator::ZeroRotator; 
-	DefaultThrows = GetWorld()->SpawnActor<ADefaultThrows>(DefaultThrowsClass.Get(), WorldLocation, Rotator);
-	DefaultThrows->Body->IgnoreActorWhenMoving(this, true);
-}
-
-void AEnemyCharacter::SetThrowsLocation(FVector WorldLocation)
-{
-	DefaultThrows->SetActorLocation(WorldLocation);
-}
-
-void AEnemyCharacter::LaunchThrows(FVector StartLocation)
-{
-	FVector PlayerLocation = Player->GetActorLocation();
-	FVector Direction = PlayerLocation - StartLocation;
-	Direction.Normalize(SMALL_NUMBER);
-
-	Direction *= 2000.f;
+	FName hand_Two_Socket = FName("hand_Two_Socket");
 	
-	DefaultThrows->Body->AddImpulse(Direction);
+	FTransform BetweenHandsLocation = GetMesh()->GetSocketTransform(hand_Two_Socket);
+
+	//DrawDebugSphere(GetWorld(),BetweenHandsLocation.GetLocation(), 5.f, 8.f,FColor::Blue, false, 5.f,0,5 );
+
+	DefaultThrows = GetWorld()->SpawnActor<ADefaultThrows>(DefaultThrowsClass.Get());
+	//DefaultThrows->SphereComponent->SetCollisionProfileName(TEXT("NoCollision"));
+	DefaultThrows->ProjectileMovementComponent->StopMovementImmediately();
 	
+	if(DefaultThrows)
+	{
+		FAttachmentTransformRules AttachRule(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, true);
+		DefaultThrows->AttachToComponent(GetMesh(), AttachRule, hand_Two_Socket);
+	}
+}
+
+void AEnemyCharacter::LaunchThrows()
+{
+	FDetachmentTransformRules DetachRule(EDetachmentRule::KeepWorld, EDetachmentRule::KeepWorld,EDetachmentRule::KeepWorld,true);
+	DefaultThrows->DetachFromActor(DetachRule);
+
+	DefaultThrows->Destroy();
+
+	FName hand_Two_Socket = FName("hand_Two_Socket");
+	FTransform BetweenHandsLocation = GetMesh()->GetSocketTransform(hand_Two_Socket);
+	
+	FVector OutLaunchVector;
+
+	UGameplayStatics::SuggestProjectileVelocity_CustomArc(GetWorld(), OutLaunchVector, BetweenHandsLocation.GetLocation(), Player->GetActorLocation());
+	
+	FRotator LookAtRotator = OutLaunchVector.Rotation();
+	ThrowsSpeed = OutLaunchVector.Length();
+	
+	DefaultThrows = GetWorld()->SpawnActor<ADefaultThrows>(DefaultThrowsClass.Get(), BetweenHandsLocation.GetLocation(), LookAtRotator);
+	DefaultThrows->SphereComponent->SetCollisionProfileName(TEXT("EnemyThrows"));
+
 }
 
 /*

@@ -23,7 +23,7 @@ public:
 	 * Visitor
 	 */
 	void Accept(VisitorPtr Visitor) override;
-	virtual void DefaultAttack() override;
+	virtual UAnimMontage* DefaultAttack() override;
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;

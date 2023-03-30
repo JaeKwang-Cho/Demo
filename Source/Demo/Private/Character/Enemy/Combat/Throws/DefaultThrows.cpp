@@ -3,7 +3,12 @@
 
 #include "Character/Enemy/Combat/Throws/DefaultThrows.h"
 
-#include "GameFramework/ProjectileMovementComponent.h"
+#include "CollisionDebugDrawingPublic.h"
+#include "GameFramework/Character.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
+
+#include "Character/Enemy/EnemyCharacter.h"
 
 // Sets default values
 ADefaultThrows::ADefaultThrows()
@@ -11,14 +16,28 @@ ADefaultThrows::ADefaultThrows()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Body"));
-	RootComponent = Body;
+	SphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComponent"));
+	SphereComponent->InitSphereRadius(50.f);
+	SphereComponent->SetCollisionObjectType(ECC_GameTraceChannel2);
+	SphereComponent->SetCollisionProfileName(TEXT("EnemyThrows"));
+
+	RootComponent = SphereComponent;
+
+	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
+	ProjectileMovementComponent->SetUpdatedComponent(SphereComponent);
+	ProjectileMovementComponent->InitialSpeed = ThrowsSpeed;
+	ProjectileMovementComponent->MaxSpeed = 3000.f;
+	ProjectileMovementComponent->bRotationFollowsVelocity = true;
+	ProjectileMovementComponent->bShouldBounce = true;
+	ProjectileMovementComponent->Bounciness = 0.1f;
 }
 
 // Called when the game starts or when spawned
 void ADefaultThrows::BeginPlay()
-{
+{	
 	Super::BeginPlay();
+
+	UE_LOG(LogTemp, Warning, TEXT("Initial Speed is %f"), ProjectileMovementComponent->InitialSpeed);
 }
 
 // Called every frame

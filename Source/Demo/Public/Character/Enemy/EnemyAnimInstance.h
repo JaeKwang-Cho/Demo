@@ -18,6 +18,10 @@ public:
 	
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
+	UAnimMontage* GetDefaultAttackMontage();
+
+	UAnimMontage* GetDefaultThrowMontage();
+
 private:
 
 	UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category= Movement, meta = (AllowPrivateAccess = "true"))
@@ -31,4 +35,16 @@ private:
 
 	UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category= Movement, meta = (AllowPrivateAccess = "true"))
 	bool bIsInAir;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Montage",meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* DefaultAttackMontage;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Montage",meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* DefaultThrowMontage;
+
+	UFUNCTION()
+	void AnimNotify_DefaultThrow_GrabRock();
+
+	UFUNCTION()
+	void AnimNotify_DefaultThrow_ThrowRock();
 };

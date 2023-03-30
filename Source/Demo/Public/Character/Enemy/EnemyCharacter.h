@@ -41,6 +41,8 @@ enum class EMonsterAttackRange : uint8
 	EMAR_Max		UMETA(DisplayName = "Max")
 };
 
+inline float ThrowsSpeed = 500;
+
 UCLASS()
 class DEMO_API AEnemyCharacter : public ACharacter, public IAbilitySystemInterface
 {
@@ -126,6 +128,16 @@ protected:
 	/*
 	 *Anim
 	 */
+	UPROPERTY()
+	class UEnemyAnimInstance* AnimInstance;
+
+public:
+	UEnemyAnimInstance* GetAnimInstance() const
+	{
+		return AnimInstance;
+	}
+
+protected:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Demo|Character")
 	FText CharacterName;
 
@@ -165,19 +177,18 @@ protected:
 protected:
 	UFUNCTION(BlueprintCallable)
 	virtual void TickAttackRangeCalculate();
-	
-	virtual void DefaultAttack();
 
 	UFUNCTION(BlueprintCallable)
-	virtual void DefaultThrow();
+	virtual UAnimMontage*  DefaultAttack();
+
+	UFUNCTION(BlueprintCallable)
+	virtual UAnimMontage*  DefaultThrow();
 
 public:
 
-	virtual void SpawnThrows(FVector WorldLocation);
+	virtual void SpawnThrows();
 
-	virtual void SetThrowsLocation(FVector WorldLocation);
-
-	virtual void LaunchThrows(FVector StartLocation);
+	virtual void LaunchThrows();
 	
 protected:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | BT",meta = (AllowPrivateAccess = "true"))
@@ -205,11 +216,6 @@ protected:
 	ADemoCharacterBase* Player;
 
 	//DB
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | Montage",meta = (AllowPrivateAccess = "true"))
-	UAnimMontage* DefaultAttackMontage;
-
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | Montage",meta = (AllowPrivateAccess = "true"))
-	UAnimMontage* DefaultThrowMontage;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | Montage",meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<class ADefaultThrows> DefaultThrowsClass;
@@ -242,8 +248,15 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Parent | Status", meta = (AllowPrivateAccess = "true"))
 	float DefaultAttackPlayRate;
 
+public:
+	float GetDefaultAttackPlayRate() const
+	{
+		return DefaultAttackPlayRate;
+	}
 
-
+private:
+	UPROPERTY()
+	AEnemyCharacter* ThisCharacter;
 
 public:
 	FORCEINLINE UBehaviorTree* GetBehaviorTree() const { return BehaviorTree; }
@@ -261,4 +274,11 @@ public:
 
 	FORCEINLINE EMonsterAttackRange GetMonsterAttackRange() const {return MonsterAttackRange;}
 	void SetBTMonsterAttackRange(EMonsterAttackRange _AttackRange);
+
+public:
+	/*
+	 * Temp
+	 */
+	UPROPERTY(EditAnywhere,Category = "Temp")
+	float VecMul = 100;
 };

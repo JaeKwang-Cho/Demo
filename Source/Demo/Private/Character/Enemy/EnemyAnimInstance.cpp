@@ -26,3 +26,37 @@ void UEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	}
 	
 }
+
+UAnimMontage* UEnemyAnimInstance::GetDefaultAttackMontage()
+{
+	if(DefaultAttackMontage)
+	{
+		if(!Montage_IsPlaying(DefaultAttackMontage))
+		{
+			return DefaultAttackMontage;
+		}
+	}
+	return nullptr;
+}
+
+UAnimMontage* UEnemyAnimInstance::GetDefaultThrowMontage()
+{
+	if(DefaultThrowMontage)
+	{
+		if(!Montage_IsPlaying(DefaultThrowMontage))
+		{
+			return DefaultThrowMontage;
+		}
+	}
+	return nullptr;
+}
+
+void UEnemyAnimInstance::AnimNotify_DefaultThrow_GrabRock()
+{
+	Enemy->SpawnThrows();
+}
+
+void UEnemyAnimInstance::AnimNotify_DefaultThrow_ThrowRock()
+{
+	Enemy->LaunchThrows();
+}

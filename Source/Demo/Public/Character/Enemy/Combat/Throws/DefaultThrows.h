@@ -4,6 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/ProjectileMovementComponent.h"
+#include "Components/SphereComponent.h"
+
 #include "DefaultThrows.generated.h"
 
 UCLASS()
@@ -15,8 +18,11 @@ public:
 	// Sets default values for this actor's properties
 	ADefaultThrows();
 
-	UPROPERTY(VisibleAnywhere)
-	UStaticMeshComponent* Body;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UProjectileMovementComponent* ProjectileMovementComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	USphereComponent* SphereComponent;
 
 protected:
 	// Called when the game starts or when spawned
