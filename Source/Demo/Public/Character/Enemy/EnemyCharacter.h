@@ -22,29 +22,75 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEnemyDiedDelegate, AEnemyCharacter*
 UENUM(BlueprintType)
 enum class EMonsterType : uint8
 {
-	EMT_Idle	UMETA(DisplayName = "Idle"),	
-	EMT_Move	UMETA(DisplayName = "Move"),	
-	EMT_Circle	UMETA(DisplayName = "Circle"),
-	EMT_Attack	UMETA(DisplayName = "Attack"),	
-	EMT_Attacking	UMETA(DisplayName = "Attacking"),	
+	EMT_Idle	UMETA(DisplayName = "Idle"),
+	
+	EMT_Chase	UMETA(DisplayName = "Chase"),
+	
+	EMT_CircleMove	UMETA(DisplayName = "CircleMove"),
+	
+	EMT_MeleeAttack	UMETA(DisplayName = "MeleeAttack"),
+
+	EMT_ThrowAttack UMETA(DisplayName = "ThrowAttack"),
+	
 	EMT_Dead	UMETA(DisplayName = "Dead"),	
 	
 	EMT_Max		UMETA(DisplayName = "Max")
 };
 
 UENUM(BlueprintType)
+enum class EMonster_MeleeAttack : uint8
+{
+	None UMETA(DisplayName = "None"),
+	
+	EMA_Draw_Near UMETA(DisplayName = "Draw_Near"),
+	
+	EMA_Attack	UMETA(DisplayName = "Attack"),	
+	EMA_Attacking	UMETA(DisplayName = "Attacking"),
+	EMA_Attacked	UMETA(DisplayName = "Attacked"),
+	
+	EMA_BackStep	UMETA(DisplayName = "BackStep"),
+	EMA_BackStepped UMETA(DisplayName = "BackStepped"),
+};
+
+UENUM(BlueprintType)
+enum class EMonster_ThrowAttack : uint8
+{
+	None UMETA(DisplayName = "None"),
+	
+	ETA_Throw	UMETA(DisplayName = "Throw"),
+	ETA_Throwing	UMETA(DisplayName = "Throwing"),	
+	ETA_Thrown	UMETA(DisplayName = "Thrown"),	
+};
+
+UENUM(BlueprintType)
+enum class EMonster_CircleMove : uint8
+{
+	None UMETA(DisplayName = "None"),
+	
+	ECM_KeepDistance	UMETA(DisplayName = "KeepDistance"),
+
+	ECM_Circle		UMETA(DisplayName = "Circle"),
+
+	ECM_PlayerComeCloser	UMETA(DisplayName = "PlayerComeCloser"),
+	//ECM_AttackedForCounter UMETA(DisplayName = "AttackedForCounter"),
+
+	ECM_SelectAttack	UMETA(DisplayName = "SelectAttack"),
+};
+
+UENUM(BlueprintType)
 enum class EMonsterAttackRange : uint8
 {
 	EMAR_DefaultAttackRange	UMETA(DisplayName = "DefaultAttackRange"),	
-	EMAR_CirclingRange_MAX UMETA(DisplayName = "CirclingRange_Max"),
-	EMAR_CirclingRange_Min UMETA(DisplayName = "CirclingRange_Min"), 
+	EMAR_CirclingRange UMETA(DisplayName = "CirclingRange"),
 	EMAR_Max		UMETA(DisplayName = "Max")
 };
 
 UCLASS()
 class DEMO_API AEnemyCharacter : public ACharacter, public IAbilitySystemInterface
 {
+private:
 	GENERATED_BODY()
+
 public:
 	AEnemyCharacter(const class FObjectInitializer& ObjectInitializer);
 	
@@ -161,29 +207,64 @@ protected:
 
 	void UIFindLookPlayer(class UWidgetComponent* _Widget);
 
+	/*
+	 *  AI - Action
+	 */
+
+	// Melee
 	UFUNCTION(BlueprintCallable)
-	void MoveToTarget(ADemoCharacterBase* _Target, float _AcceptanceRadius);
+	void DrawNearToTarget(float _AcceptanceRadius =50.f);
 
 	UFUNCTION(BlueprintCallable)
-	void MoveToCircleRange(ADemoCharacterBase* _Target);
+	void BackStepFromTarget(float _BackStepRange = 200.f, float _AcceptanceRadius = 50.f);
+	bool bIsBackStepping = false;
+	
+	UFUNCTION(BlueprintCallable)
+	virtual void  DefaultAttack();
 
 	UFUNCTION(BlueprintCallable)
-	void MoveInCircle(ADemoCharacterBase* _Target);
+	virtual void CheckMeleeRangeCalculate();
+
+	// Circle
+	UFUNCTION(BlueprintCallable)
+	void MoveToCircleRange(float _AcceptanceRadius = 50.f);
+	bool bIsRight = true;
+	bool bIsMoveToCircleRange = false;
+	FVector CircleRangeTargetLocation;
+
+	UFUNCTION(BlueprintCallable)
+	void MoveInCircle(float _AcceptanceRadius = 50.f, 	float SideStepUnit = 100.f);
+	FVector CircleStepTargetLocation;
+
+	UFUNCTION(BlueprintCallable)
+	virtual void CheckCircleRangeCalculate();
+
+	// Throw
+	
+	UFUNCTION(BlueprintCallable)
+	virtual void  DefaultThrow();
 
 	float PlayHighPriorityMontage(UAnimMontage* Montage, FName StartSectionName, float InPlayRate);
+
+	/*
+	 *  AI - Checker
+	 */
+	virtual void TickDrawNearChecker();
+
+	virtual void TickKeepDistanceChecker();
 	
-protected:
-	UFUNCTION(BlueprintCallable)
-	virtual void TickAttackRangeCalculate();
+	virtual void TickBackStepChecker();
+	FVector BackStepTargetLocation;
 
-	UFUNCTION(BlueprintCallable)
-	virtual UAnimMontage*  DefaultAttack();
-
-	UFUNCTION(BlueprintCallable)
-	virtual UAnimMontage*  DefaultThrow();
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BehaviorTree", meta = (AllowPrivateAccess = "true"))
+	float ToleranceDistance = 100.f;
+	
+	virtual void TickCircleChecker();
 
 public:
-
+	/*
+	 *  AI - AnimNotify Callback
+	 */
 	virtual void SpawnThrows();
 
 	virtual void LaunchThrows();
@@ -201,14 +282,23 @@ protected:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | Enum",meta = (AllowPrivateAccess = "true"))
 	EMonsterType MonsterType;
 
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | Enum | Sub",meta = (AllowPrivateAccess = "true"))
+	EMonster_MeleeAttack MeleeType;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | Enum | Sub",meta = (AllowPrivateAccess = "true"))
+	EMonster_CircleMove CircleType;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | Enum | Sub",meta = (AllowPrivateAccess = "true"))
+	EMonster_ThrowAttack ThrowType;
+
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Parent | Enum",meta = (AllowPrivateAccess = "true"))
 	EMonsterAttackRange MonsterAttackRange;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Combat | Distance",meta = (AllowPrivateAccess = "true"))
-	float _Min_Circle = 300;
+	float _Min_Circle = 400;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Combat | Distance",meta = (AllowPrivateAccess = "true"))
-	float _Max_Circle = 500;
+	float _Max_Circle = 700;
 	
 	UPROPERTY()
 	ADemoCharacterBase* Player;
@@ -234,13 +324,18 @@ protected:
 private:
 	//HealthBar Timer
 	FTimerHandle HealthBarTimer;
+	FTimerHandle CoolDownTimer;
+
+	void OnCoolDown();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Parent | UITimer", meta = (AllowPrivateAccess = "true"))
 	float HealthBarDisplayTime;
-
-	//추후 DB�?뺄것 
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Parent | Status", meta = (AllowPrivateAccess = "true"))
 	float DefaultAttackRange;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Parent | Status", meta = (AllowPrivateAccess = "true"))
+	float CirclingRange;
 
 	//DB
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Parent | Status", meta = (AllowPrivateAccess = "true"))
@@ -267,8 +362,36 @@ public:
 
 	FORCEINLINE EMonsterType GetMonsterType() const {return MonsterType;}
 
+	FORCEINLINE EMonster_MeleeAttack GetMeleeType() const {return MeleeType;}
+
+	FORCEINLINE EMonster_CircleMove GetCircleType() const	{return CircleType;}
+
+	FORCEINLINE EMonster_ThrowAttack GetThrowType() const	{return ThrowType;}
+
 	UFUNCTION(BlueprintCallable)
 	void SetBTMonsterType(EMonsterType _Type);
+
+	UFUNCTION(BlueprintCallable)
+	void SetBTMeleeType(EMonster_MeleeAttack _Type);
+	
+	UFUNCTION(BlueprintCallable)
+	void SetBTThrowType(EMonster_ThrowAttack _Type);
+
+	UFUNCTION(BlueprintCallable)
+	void SetBTCircleType(EMonster_CircleMove _Type);
+
+	void ResetBelowTypes(){
+		MeleeType = EMonster_MeleeAttack::None;
+		CircleType = EMonster_CircleMove::None;
+		ThrowType = EMonster_ThrowAttack::None;
+	}
+
+	UFUNCTION(BlueprintCallable)
+	void ChangeMonsterTypeTo(EMonsterType _NextType,
+		EMonster_CircleMove _NextCircle = EMonster_CircleMove::None,
+		EMonster_MeleeAttack _NextMelee = EMonster_MeleeAttack::None,
+		EMonster_ThrowAttack _NextThrow = EMonster_ThrowAttack::None);
+	
 
 	FORCEINLINE EMonsterAttackRange GetMonsterAttackRange() const {return MonsterAttackRange;}
 	void SetBTMonsterAttackRange(EMonsterAttackRange _AttackRange);

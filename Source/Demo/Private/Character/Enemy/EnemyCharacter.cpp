@@ -29,6 +29,9 @@
 #include "Character/Enemy/EnemyAnimInstance.h"
 
 #include "DrawDebugHelpers.h"
+#include "Math/UnrealMathUtility.h"
+#include "VectorTypes.h"
+#include "Engine/Internal/Kismet/BlueprintTypeConversions.h"
 
 AEnemyCharacter::AEnemyCharacter(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer),
@@ -37,6 +40,7 @@ MonsterAttackRange(EMonsterAttackRange::EMAR_DefaultAttackRange),
 MaxHp(100),
 HealthBarDisplayTime(5.f),
 DefaultAttackRange(200.f),
+CirclingRange(400.f),
 DefaultAttackPlayRate(1.0f)
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -173,12 +177,29 @@ void AEnemyCharacter::BeginPlay()
 void AEnemyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	/*
-	if(EMonsterType::EMT_Attack == MonsterType || EMonsterType::EMT_Move == MonsterType)
+
+	if(GetMonsterType() == EMonsterType::EMT_CircleMove)
 	{
-		TickAttackRangeCalculate();
+		if(GetCircleType() == EMonster_CircleMove::ECM_KeepDistance)
+		{
+			TickKeepDistanceChecker();
+		}
+		if(GetCircleType() == EMonster_CircleMove::ECM_Circle)
+		{
+			TickCircleChecker();
+		}
 	}
-	*/
+	if(GetMonsterType() == EMonsterType::EMT_MeleeAttack)
+	{
+		if(GetMeleeType() == EMonster_MeleeAttack::EMA_Attacked)
+		{
+			TickBackStepChecker();
+		}
+		if(GetMeleeType() == EMonster_MeleeAttack::EMA_Draw_Near)
+		{
+			TickDrawNearChecker();
+		}
+	}	
 }
 
 void AEnemyCharacter::PossessedBy(AController* NewController)
@@ -237,41 +258,113 @@ void AEnemyCharacter::UIFindLookPlayer(UWidgetComponent* _Widget)
 	}
 }
 
-void AEnemyCharacter::MoveToTarget(ADemoCharacterBase* _Target, float _AcceptanceRadius)
+void AEnemyCharacter::DrawNearToTarget(float _AcceptanceRadius)
 {
 	if(EnemyController)
 	{
-		SetBTMonsterType(EMonsterType::EMT_Move);
+		SetBTMeleeType(EMonster_MeleeAttack::EMA_Draw_Near);
+		//UE_LOG(LogTemp, Warning, TEXT("SetBTMeleeType(EMonster_MeleeAttack::EMA_Draw_Near)"));
 		FAIMoveRequest MoveRequest;
-		MoveRequest.SetGoalActor(_Target);
+		MoveRequest.SetGoalActor(Player);
 		MoveRequest.SetAcceptanceRadius(_AcceptanceRadius);
 		FNavPathSharedPtr NavPath;
 
-		EnemyController->MoveToActor(_Target, _AcceptanceRadius,true, true);
+		EnemyController->MoveToActor(Player, _AcceptanceRadius,true, true);
 		//상태 스피드.. 등등..		
 	}
 }
 
-void AEnemyCharacter::MoveToCircleRange(ADemoCharacterBase* _Target)
+void AEnemyCharacter::BackStepFromTarget(float _BackStepRange, float _AcceptanceRadius)
+{
+	if(EnemyController && Player)
+	{
+		//UE_LOG(LogTemp, Warning, TEXT("SetBTMeleeType(EMonster_MeleeAttack::EMA_BackStep)"));
+		
+		FVector PlayerLocation = Player->GetActorLocation();
+		FVector EnemyLocation = GetActorLocation();
+
+		FVector Direction = EnemyLocation - PlayerLocation;
+		Direction.Normalize(SMALL_NUMBER);
+		Direction *= _BackStepRange;
+
+		if(!bIsBackStepping)
+		{
+			bIsBackStepping = true;
+			UE_LOG(LogTemp, Warning, TEXT("bIsBackStepping is True"));
+			BackStepTargetLocation= EnemyLocation + Direction;
+		}
+
+		FAIMoveRequest aiMoveRequest(BackStepTargetLocation);
+		aiMoveRequest.SetAcceptanceRadius(_AcceptanceRadius);
+		aiMoveRequest.SetUsePathfinding(true);
+		//FNavPathSharedPtr* OutPath;
+		
+		EnemyController->MoveTo(aiMoveRequest, nullptr);
+		
+	}
+}
+
+void AEnemyCharacter::MoveToCircleRange(float _AcceptanceRadius)
+{
+	if(EnemyController && !bIsMoveToCircleRange)
+	{		
+		SetBTCircleType(EMonster_CircleMove::ECM_KeepDistance);
+		
+		FVector PlayerLocation = Player->GetActorLocation();
+		FVector EnemyLocation = GetActorLocation();
+
+		FVector Direction = EnemyLocation - PlayerLocation;
+		Direction.Normalize(SMALL_NUMBER);
+		Direction *= _Min_Circle;
+
+		CircleRangeTargetLocation = PlayerLocation + Direction;
+
+		FAIMoveRequest aiMoveRequest(CircleRangeTargetLocation);
+		aiMoveRequest.SetAcceptanceRadius(_AcceptanceRadius);
+		aiMoveRequest.SetUsePathfinding(true);
+
+		//FNavPathSharedPtr* OutPath;
+		
+		EnemyController->MoveTo(aiMoveRequest, nullptr);
+		
+		bIsMoveToCircleRange = true;
+	}
+}
+
+void AEnemyCharacter::MoveInCircle(float _AcceptanceRadius, float SideStepUnit)
 {
 	if(EnemyController)
 	{
-		SetBTMonsterType(EMonsterType::EMT_Move);
-		FAIMoveRequest MoveRequest;
-		MoveRequest.SetGoalActor(_Target);
-		
-		const float Distance = FMath::RandRange(_Min_Circle, _Max_Circle);
-		MoveRequest.SetAcceptanceRadius(Distance);
-		FNavPathSharedPtr NavPath;
-
-		EnemyController->MoveToActor(_Target, Distance,true, true);
-		//상태 스피드.. 등등..		
-	}
-}
-
-void AEnemyCharacter::MoveInCircle(ADemoCharacterBase* _Target)
-{
+		float MulForDirection;
+		if(bIsRight)
+		{
+			MulForDirection = 1.f;
+		}else
+		{
+			MulForDirection = -1.f;
+		}
 	
+		FVector PlayerLocation = Player->GetActorLocation();
+		FVector EnemyLocation = GetActorLocation();
+
+		FVector DirectionToPlayer = PlayerLocation - EnemyLocation;
+		FVector SideVector = FVector::CrossProduct(DirectionToPlayer, GetActorUpVector());
+		SideVector.Normalize(SMALL_NUMBER);
+
+		SideVector *= SideStepUnit;
+		
+		SideVector*= MulForDirection;
+
+		CircleStepTargetLocation = GetActorLocation() + SideVector;
+
+		FAIMoveRequest aiMoveRequest(CircleStepTargetLocation);
+		aiMoveRequest.SetAcceptanceRadius(_AcceptanceRadius);
+		aiMoveRequest.SetUsePathfinding(true);
+
+		//FNavPathSharedPtr* OutPath;
+
+		EnemyController->MoveTo(aiMoveRequest, nullptr);
+	}
 }
 
 float AEnemyCharacter::PlayHighPriorityMontage(UAnimMontage* Montage, FName StartSectionName, float InPlayRate)
@@ -287,49 +380,134 @@ float AEnemyCharacter::PlayHighPriorityMontage(UAnimMontage* Montage, FName Star
 	return 0.0f;
 }
 
-void AEnemyCharacter::TickAttackRangeCalculate()
+void AEnemyCharacter::TickDrawNearChecker()
 {
-	float Distance  = GetDistanceTo(Player);
-	if(Distance < 200.f)
+	if(GetDistanceTo(Player) <= DefaultAttackRange)
 	{
-		SetBTMonsterType(EMonsterType::EMT_Attack);
-	}else if(Distance < 600.f)
+		SetBTMeleeType(EMonster_MeleeAttack::EMA_Attack);
+		UE_LOG(LogTemp, Warning, TEXT("SetBTMeleeType(EMonster_MeleeAttack::EMA_Attack)"));
+	}	
+}
+
+void AEnemyCharacter::TickKeepDistanceChecker()
+{
+	if(GetDistanceTo(Player) <= _Max_Circle)
 	{
-		//SetBTMonsterType(EMonsterType::EMT_Circle);
-	}else
-	{
-		SetBTMonsterType(EMonsterType::EMT_Move);
+		bIsRight = FMath::RandBool();
+		SetBTCircleType(EMonster_CircleMove::ECM_Circle);
+		bIsMoveToCircleRange = false;
+		UE_LOG(LogTemp, Warning, TEXT("SetBTCircleType(EMonster_CircleMove::ECM_Circling)"));
 	}
 }
 
-UAnimMontage*  AEnemyCharacter::DefaultAttack()
+void AEnemyCharacter::TickBackStepChecker()
 {
-	if(GetMonsterType()==EMonsterType::EMT_Dead) return nullptr;
-	
-	//SetBTMonsterType(EMonsterType::EMT_Attacking);
+	if(FVector::Dist(BackStepTargetLocation, GetActorLocation()) <= ToleranceDistance)
+	{
+		SetBTMeleeType(EMonster_MeleeAttack::EMA_BackStepped);
+		bIsBackStepping = false;
+		EnemyController->ClearFocus(EAIFocusPriority::Gameplay);
+		UE_LOG(LogTemp, Warning, TEXT("SetBTMeleeType(EMonster_MeleeAttack::EMA_BackStepped)"));
+	}
+	//UE_LOG(LogTemp, Warning, TEXT("Distance compare %.1f, %.1f"), FVector::Dist(BackStepTargetLocation, GetActorLocation()), ToleranceDistance);
+}
 
+void AEnemyCharacter::TickCircleChecker()
+{
+	if(GetDistanceTo(Player) > _Max_Circle)
+	{
+		SetBTCircleType(EMonster_CircleMove::ECM_KeepDistance);
+		UE_LOG(LogTemp, Warning, TEXT("SetBTCircleType(EMonster_CircleMove::ECM_Approaching)"));
+	}else if(GetDistanceTo(Player) <= DefaultAttackRange)
+	{
+		SetBTCircleType(EMonster_CircleMove::ECM_PlayerComeCloser);
+		UE_LOG(LogTemp, Warning, TEXT("SetBTCircleType(EMonster_CircleMove::ECM_PlayerComeCloser)"));
+	}
+}
+
+void  AEnemyCharacter::DefaultAttack()
+{
+	if(GetMonsterType()==EMonsterType::EMT_Dead) return;
+	
+	SetBTMeleeType(EMonster_MeleeAttack::EMA_Attacking);
+	UE_LOG(LogTemp, Warning, TEXT("SetBTMeleeType(EMonster_MeleeAttack::EMA_Attacking)"));
+
+	EnemyController->SetFocus(Player, EAIFocusPriority::Gameplay);
+	
     //UE_LOG(LogTemp, Warning, TEXT("DefaultAttack()"));
 	//PlayHighPriorityMontage(DefaultAttackMontage,FName("Attack"),DefaultAttackPlayRate);
 	if(AnimInstance)
 	{
-		return AnimInstance->GetDefaultAttackMontage();
+		AnimInstance->PlayDefaultAttackMontage(DefaultAttackPlayRate);
 	}
-	return nullptr;
 }
 
-UAnimMontage*  AEnemyCharacter::DefaultThrow()
+void AEnemyCharacter::CheckMeleeRangeCalculate()
 {
-	if(GetMonsterType()==EMonsterType::EMT_Dead) return nullptr;
-	
-	//SetBTMonsterType(EMonsterType::EMT_Attacking);
+	if(GetDistanceTo(Player) > DefaultAttackRange)
+	{
+		//거리 +70
+		if(GetMeleeType() == EMonster_MeleeAttack::None)
+		{
+			SetBTMeleeType(EMonster_MeleeAttack::EMA_Draw_Near);
+		}
+	}else
+	{
+		if(GetMeleeType() == EMonster_MeleeAttack::EMA_Attacked)
+		{
+			SetBTMeleeType(EMonster_MeleeAttack::EMA_BackStep);
+		}else
+		{
+			SetBTMeleeType(EMonster_MeleeAttack::EMA_Attack);	
+		}
+	}
+}
 
+
+void AEnemyCharacter::CheckCircleRangeCalculate()
+{
+	GetWorldTimerManager().SetTimer(CoolDownTimer, this, &AEnemyCharacter::OnCoolDown, 5.f, false);
+	if(GetDistanceTo(Player) > _Max_Circle)
+	{
+		SetBTCircleType(EMonster_CircleMove::ECM_KeepDistance);
+	}else if(GetDistanceTo(Player) >= _Min_Circle)
+	{
+		SetBTCircleType(EMonster_CircleMove::ECM_Circle);
+	}else
+	{
+		SetBTCircleType(EMonster_CircleMove::ECM_PlayerComeCloser);
+	}
+}
+
+void AEnemyCharacter::OnCoolDown()
+{
+	EnemyController->SetFocus(Player, EAIFocusPriority::Gameplay);
+	
+	ChangeMonsterTypeTo(EMonsterType::EMT_CircleMove, EMonster_CircleMove::ECM_SelectAttack, EMonster_MeleeAttack::None, EMonster_ThrowAttack::None);
+	GetWorldTimerManager().ClearTimer(CoolDownTimer);
+	UE_LOG(LogTemp,Warning,TEXT("CoolDown"));
+}
+
+/*
+ * Throwing
+ */
+
+void  AEnemyCharacter::DefaultThrow()
+{
+	if(GetMonsterType()==EMonsterType::EMT_Dead) return;
+		
+	if(EnemyController)
+		EnemyController->StopMovement();
+	
+	SetBTThrowType(EMonster_ThrowAttack::ETA_Throwing);
+	
 	//UE_LOG(LogTemp, Warning, TEXT("DefaultAttack()"));
 	//PlayHighPriorityMontage(DefaultThrowMontage,FName("Throw"),DefaultAttackPlayRate);
 	if(AnimInstance)
 	{
-		return AnimInstance->GetDefaultThrowMontage();
+		AnimInstance->PlayDefaultThrowMontage(DefaultAttackPlayRate);
 	}
-	return nullptr;
+	EnemyController->ClearFocus(EAIFocusPriority::Gameplay);
 }
 
 void AEnemyCharacter::SpawnThrows()
@@ -385,6 +563,42 @@ void AEnemyCharacter::SetBTMonsterType(EMonsterType _Type)
 	}
 }
 
+void AEnemyCharacter::SetBTMeleeType(EMonster_MeleeAttack _Type)
+{
+	if(EnemyController)
+	{
+		MeleeType = _Type;
+		EnemyController->GetBlackBoardComponent()->SetValueAsEnum(FName("MeleeType"),uint8(MeleeType));
+	}
+}
+
+void AEnemyCharacter::SetBTThrowType(EMonster_ThrowAttack _Type)
+{
+	if(EnemyController)
+	{
+		ThrowType = _Type;
+		EnemyController->GetBlackBoardComponent()->SetValueAsEnum(FName("ThrowType"),uint8(ThrowType));
+	}
+}
+
+void AEnemyCharacter::SetBTCircleType(EMonster_CircleMove _Type)
+{
+	if(EnemyController)
+	{
+		CircleType = _Type;
+		EnemyController->GetBlackBoardComponent()->SetValueAsEnum(FName("CircleType"),uint8(CircleType));
+	}
+}
+
+void AEnemyCharacter::ChangeMonsterTypeTo(EMonsterType _NextType, EMonster_CircleMove _NextCircle, EMonster_MeleeAttack _NextMelee, EMonster_ThrowAttack _NextThrow)
+{
+	SetBTCircleType(_NextCircle);
+	SetBTMeleeType(_NextMelee);
+	SetBTThrowType(_NextThrow);
+	SetBTMonsterType(_NextType);
+}
+	
+
 void AEnemyCharacter::SetBTMonsterAttackRange(EMonsterAttackRange _AttackRange)
 {
 	if(EnemyController)
@@ -407,6 +621,10 @@ void AEnemyCharacter::ExecuteVisitor(FString key)
 		Accept(it->second);
 }
 
+
+/*
+ * GAS
+ */
 UAbilitySystemComponent* AEnemyCharacter::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent.Get();

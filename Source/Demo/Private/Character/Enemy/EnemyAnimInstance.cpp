@@ -27,36 +27,44 @@ void UEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	
 }
 
-UAnimMontage* UEnemyAnimInstance::GetDefaultAttackMontage()
+void UEnemyAnimInstance::PlayDefaultAttackMontage(float PlayRate)
 {
 	if(DefaultAttackMontage)
 	{
 		if(!Montage_IsPlaying(DefaultAttackMontage))
 		{
-			return DefaultAttackMontage;
+			Montage_Play(DefaultAttackMontage, PlayRate);
 		}
 	}
-	return nullptr;
 }
 
-UAnimMontage* UEnemyAnimInstance::GetDefaultThrowMontage()
+void UEnemyAnimInstance::PlayDefaultThrowMontage(float PlayRate)
 {
 	if(DefaultThrowMontage)
 	{
 		if(!Montage_IsPlaying(DefaultThrowMontage))
 		{
-			return DefaultThrowMontage;
+			Montage_Play(DefaultThrowMontage, PlayRate);
 		}
 	}
-	return nullptr;
 }
 
-void UEnemyAnimInstance::AnimNotify_DefaultThrow_GrabRock()
+void UEnemyAnimInstance::AnimNotify_DefaultThrow_GrabRock() const
 {
 	Enemy->SpawnThrows();
 }
 
-void UEnemyAnimInstance::AnimNotify_DefaultThrow_ThrowRock()
+void UEnemyAnimInstance::AnimNotify_DefaultThrow_ThrowRock() const
 {
 	Enemy->LaunchThrows();
+}
+
+void UEnemyAnimInstance::AnimNotify_AttackEnd()
+{
+	Enemy->SetBTMeleeType(EMonster_MeleeAttack::EMA_Attacked);
+}
+
+void UEnemyAnimInstance::AnimNotify_ThrowEnd()
+{
+	Enemy->SetBTThrowType(EMonster_ThrowAttack::ETA_Thrown);
 }

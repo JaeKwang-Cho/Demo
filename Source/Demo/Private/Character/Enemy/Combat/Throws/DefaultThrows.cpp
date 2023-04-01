@@ -18,6 +18,7 @@ ADefaultThrows::ADefaultThrows()
 	SphereComponent->InitSphereRadius(50.f);
 	SphereComponent->SetCollisionObjectType(ECC_GameTraceChannel2);
 	SphereComponent->SetCollisionProfileName(TEXT("EnemyThrows"));
+	this->SetLifeSpan(3.f);
 
 	RootComponent = SphereComponent;
 

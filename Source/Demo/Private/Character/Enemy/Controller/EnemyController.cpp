@@ -95,6 +95,7 @@ void AEnemyController::BeginPlay()
 
 void AEnemyController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
 {
+	
 	ADemoCharacterBase* Player = Cast<ADemoCharacterBase>(Actor);
 	if(Player == nullptr)
 		return;
@@ -107,12 +108,12 @@ void AEnemyController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
 
 		GetBlackBoardComponent()->SetValueAsObject("Target",Actor);
 		//테스트코드 -> 추후수정
-		if(EnemyCharacter->GetMonsterType()!=EMonsterType::EMT_Attacking)
+		if(EnemyCharacter->GetMonsterType() == EMonsterType::EMT_Idle)
 		{
-			EnemyCharacter->SetBTMonsterType(EMonsterType::EMT_Move);
-			SetFocus(Player);
+			EnemyCharacter->SetBTMonsterType(EMonsterType::EMT_CircleMove);
 		}
 	}
+	
 	// else
 	// {
 	// 	UE_LOG(LogTemp,Warning,TEXT("Stimulus Fail"));
@@ -131,11 +132,7 @@ void AEnemyController::SetSensedTarget(APawn* NewTarget)
 		{
 			GetBlackBoardComponent()->SetValueAsObject("Target",Player);
 			//테스트 코드 -> 추후수정
-			if(EnemyCharacter->GetMonsterType()!=EMonsterType::EMT_Attacking)
-			{
-				SetFocus(NewTarget);
-				EnemyCharacter->SetBTMonsterType(EMonsterType::EMT_Move);
-			}
+			EnemyCharacter->SetBTMonsterType(EMonsterType::EMT_CircleMove);
 		}
 	}
 }

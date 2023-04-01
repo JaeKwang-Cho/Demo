@@ -18,9 +18,9 @@ public:
 	
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
-	UAnimMontage* GetDefaultAttackMontage();
+	void PlayDefaultAttackMontage(float PlayRate);
 
-	UAnimMontage* GetDefaultThrowMontage();
+	void PlayDefaultThrowMontage(float PlayRate);
 
 private:
 
@@ -43,8 +43,14 @@ private:
 	UAnimMontage* DefaultThrowMontage;
 
 	UFUNCTION()
-	void AnimNotify_DefaultThrow_GrabRock();
+	void AnimNotify_DefaultThrow_GrabRock() const;
 
 	UFUNCTION()
-	void AnimNotify_DefaultThrow_ThrowRock();
+	void AnimNotify_DefaultThrow_ThrowRock() const;
+
+	UFUNCTION()
+	void AnimNotify_AttackEnd();
+
+	UFUNCTION()
+	void AnimNotify_ThrowEnd();
 };

@@ -83,9 +83,9 @@ void AEnemyPanchi::InitializeStartingValues()
 	
 }
 
-UAnimMontage* AEnemyPanchi::DefaultAttack()
+void AEnemyPanchi::DefaultAttack()
 {
-	return Super::DefaultAttack();
+	Super::DefaultAttack();
 }
 
 
